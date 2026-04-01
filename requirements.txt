@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+numpy
+pandas
+scikit-learn
+pillow
+matplotlib
+streamlit
+requests
+python-multipart
+prometheus-client
+locust
+joblib
+pytest

@@ -1,0 +1,4 @@
+timestamp,replicas,users,spawn_rate,run_time,requests,failures,avg_latency_ms,p95_latency_ms,rps,log_file
+2026-04-01T21:53:04Z,1,10,5,10s,11,0,2355,5000,1.82,evidence/flood-test/locust_replicas_1.log
+2026-04-01T21:53:19Z,2,10,5,10s,9,0,1629,3600,2.39,evidence/flood-test/locust_replicas_2.log
+2026-04-01T21:53:33Z,3,10,5,10s,18,0,1831,5000,2.99,evidence/flood-test/locust_replicas_3.log

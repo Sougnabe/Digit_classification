@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.swp
+.env
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+.DS_Store
+models/*.keras
+models/*.h5
+models/*.pkl
+!models/.gitkeep
+data/uploads/*
+!data/uploads/.gitkeep
