@@ -156,6 +156,7 @@ Deployment steps:
 Recommended public endpoints after deployment:
 - API: `/health`, `/predict`, `/evaluate`, `/metrics`
 - UI: Streamlit dashboard page
+- Live UI URL: https://ml-summative-ui.onrender.com
 
 ### 8.2 Docker deployment and scaling
 If you want to run locally or on your own infrastructure:
