@@ -37,6 +37,17 @@ def fetch_metrics(base_url: str):
     return response.text, None
 
 
+def parse_api_json(response: requests.Response, action_name: str):
+    if response.status_code == 429:
+        return None, f"{action_name} is temporarily rate-limited (429). Please wait a few seconds and try again."
+    if response.status_code >= 400:
+        return None, f"{action_name} failed ({response.status_code}): {response.text[:200]}"
+    try:
+        return response.json(), None
+    except ValueError:
+        return None, f"{action_name} returned a non-JSON response. Please retry in a few seconds."
+
+
 st.markdown(
     """
 <style>
@@ -152,7 +163,11 @@ st.caption("Run evaluation on the current production model and review performanc
 if st.button("Run Production Evaluation"):
     try:
         response = requests.get(f"{API_URL}/evaluate", timeout=60)
-        st.json(response.json())
+        body, error = parse_api_json(response, "Evaluation")
+        if error:
+            st.warning(error)
+        else:
+            st.json(body)
     except (requests.RequestException, ValueError) as ex:
         st.error(f"Evaluation failed: {ex}")
 
@@ -164,7 +179,11 @@ if pred_file and st.button("Predict"):
     files = {"file": (pred_file.name, pred_file.getvalue(), pred_file.type)}
     try:
         response = requests.post(f"{API_URL}/predict", files=files, timeout=60)
-        st.json(response.json())
+        body, error = parse_api_json(response, "Prediction")
+        if error:
+            st.warning(error)
+        else:
+            st.json(body)
     except (requests.RequestException, ValueError) as ex:
         st.error(f"Prediction failed: {ex}")
 
@@ -183,7 +202,11 @@ if bulk_files and class_name and st.button("Upload Bulk"):
     files = [("files", (f.name, f.getvalue(), f.type)) for f in bulk_files]
     try:
         response = requests.post(f"{API_URL}/upload-bulk", params={"class_name": class_name}, files=files, timeout=120)
-        st.json(response.json())
+        body, error = parse_api_json(response, "Bulk upload")
+        if error:
+            st.warning(error)
+        else:
+            st.json(body)
     except (requests.RequestException, ValueError) as ex:
         st.error(f"Upload failed: {ex}")
 
@@ -193,6 +216,10 @@ epochs = st.number_input("Epochs", min_value=1, max_value=50, value=3)
 if st.button("Retrain Model"):
     try:
         response = requests.post(f"{API_URL}/retrain", params={"epochs": int(epochs)}, timeout=3600)
-        st.json(response.json())
+        body, error = parse_api_json(response, "Retraining")
+        if error:
+            st.warning(error)
+        else:
+            st.json(body)
     except (requests.RequestException, ValueError) as ex:
         st.error(f"Retraining failed: {ex}")
