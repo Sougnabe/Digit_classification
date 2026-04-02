@@ -19,6 +19,9 @@ How this source was identified: class folders are `0` to `9` and image files are
 
 Train/test split used for all reported results: the project uses the current split already present in `data/train` (training set) and `data/test` (test set).
 
+## Video Demo
+YouTube: https://youtu.be/dvAE_OMBiII
+
 ## 2. Repository Structure
 ```text
 Project_name/
