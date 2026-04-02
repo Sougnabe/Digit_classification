@@ -7,15 +7,30 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from PIL import Image
 from prometheus_client import generate_latest
 
-from src.model import MODEL_PATH
-from src.model import evaluate_trained_model
 from src.monitoring import REQUEST_COUNT, REQUEST_LATENCY, RETRAIN_COUNT
-from src.prediction import predict_image
-from src.retrain import retrain_model
 from src.upload_store import save_uploaded_file
 
 
 app = FastAPI(title="Image Classification API", version="1.0.0")
+MODEL_PATH = Path("models/image_classifier.pkl")
+
+
+def evaluate_trained_model(*args, **kwargs):
+    from src.model import evaluate_trained_model as _evaluate_trained_model
+
+    return _evaluate_trained_model(*args, **kwargs)
+
+
+def retrain_model(*args, **kwargs):
+    from src.retrain import retrain_model as _retrain_model
+
+    return _retrain_model(*args, **kwargs)
+
+
+def predict_image(*args, **kwargs):
+    from src.prediction import predict_image as _predict_image
+
+    return _predict_image(*args, **kwargs)
 
 
 @app.get("/health")

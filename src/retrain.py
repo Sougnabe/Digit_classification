@@ -1,7 +1,6 @@
 import shutil
 from pathlib import Path
 
-from src.model import train_and_evaluate
 from src.upload_store import materialize_uploaded_files_to_train
 
 
@@ -34,6 +33,8 @@ def move_uploaded_data_into_train() -> int:
 
 
 def retrain_model(epochs: int = 3):
+    from src.model import train_and_evaluate
+
     moved_files = move_uploaded_data_into_train()
     copied_files = materialize_uploaded_files_to_train()
     metrics = train_and_evaluate(epochs=epochs)
