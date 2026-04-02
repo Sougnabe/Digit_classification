@@ -1,4 +1,5 @@
 import os
+import time
 from pathlib import Path
 
 import numpy as np
@@ -10,13 +11,30 @@ from PIL import UnidentifiedImageError
 
 
 API_URL = os.getenv("API_URL", "http://localhost:8000")
+API_READ_TIMEOUT_SECONDS = 20
+API_MAX_RETRIES = 2
 
 st.set_page_config(page_title="ML Pipeline Dashboard", layout="wide")
 
 
+def request_with_retry(method: str, url: str, **kwargs):
+    last_error = None
+    for attempt in range(API_MAX_RETRIES + 1):
+        try:
+            return requests.request(method=method, url=url, timeout=API_READ_TIMEOUT_SECONDS, **kwargs)
+        except requests.Timeout as ex:
+            last_error = ex
+            if attempt < API_MAX_RETRIES:
+                time.sleep(1.5)
+                continue
+            raise
+    if last_error:
+        raise last_error
+
+
 @st.cache_data(ttl=60)
 def fetch_health(base_url: str):
-    response = requests.get(f"{base_url}/health", timeout=8)
+    response = request_with_retry("GET", f"{base_url}/health")
     if response.status_code == 429:
         return None, "Health endpoint is rate-limited (429). Wait a few seconds and refresh."
     if response.status_code != 200:
@@ -29,7 +47,7 @@ def fetch_health(base_url: str):
 
 @st.cache_data(ttl=60)
 def fetch_metrics(base_url: str):
-    response = requests.get(f"{base_url}/metrics", timeout=8)
+    response = request_with_retry("GET", f"{base_url}/metrics")
     if response.status_code == 429:
         return None, "Metrics endpoint is rate-limited (429). Wait a few seconds and refresh."
     if response.status_code != 200:
@@ -186,7 +204,7 @@ st.subheader("Production Evaluation")
 st.caption("Run evaluation on the current production model and review performance metrics.")
 if st.button("Run Production Evaluation"):
     try:
-        response = requests.get(f"{API_URL}/evaluate", timeout=60)
+        response = request_with_retry("GET", f"{API_URL}/evaluate")
         body, error = parse_api_json(response, "Evaluation")
         if error:
             st.warning(error)
@@ -202,7 +220,7 @@ pred_file = st.file_uploader("Upload one image for prediction", type=["png", "jp
 if pred_file and st.button("Predict"):
     files = {"file": (pred_file.name, pred_file.getvalue(), pred_file.type)}
     try:
-        response = requests.post(f"{API_URL}/predict", files=files, timeout=60)
+        response = request_with_retry("POST", f"{API_URL}/predict", files=files)
         body, error = parse_api_json(response, "Prediction")
         if error:
             st.warning(error)
@@ -225,7 +243,7 @@ bulk_files = st.file_uploader(
 if bulk_files and class_name and st.button("Upload Bulk"):
     files = [("files", (f.name, f.getvalue(), f.type)) for f in bulk_files]
     try:
-        response = requests.post(f"{API_URL}/upload-bulk", params={"class_name": class_name}, files=files, timeout=120)
+        response = request_with_retry("POST", f"{API_URL}/upload-bulk", params={"class_name": class_name}, files=files)
         body, error = parse_api_json(response, "Bulk upload")
         if error:
             st.warning(error)
@@ -239,7 +257,7 @@ st.caption("Start a new training run using current dataset and uploaded images."
 epochs = st.number_input("Epochs", min_value=1, max_value=50, value=3)
 if st.button("Retrain Model"):
     try:
-        response = requests.post(f"{API_URL}/retrain", params={"epochs": int(epochs)}, timeout=3600)
+        response = request_with_retry("POST", f"{API_URL}/retrain", params={"epochs": int(epochs)})
         body, error = parse_api_json(response, "Retraining")
         if error:
             st.warning(error)
