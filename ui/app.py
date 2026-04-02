@@ -11,6 +11,31 @@ from PIL import UnidentifiedImageError
 
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 
+st.set_page_config(page_title="ML Pipeline Dashboard", layout="wide")
+
+
+@st.cache_data(ttl=60)
+def fetch_health(base_url: str):
+    response = requests.get(f"{base_url}/health", timeout=8)
+    if response.status_code == 429:
+        return None, "Health endpoint is rate-limited (429). Wait a few seconds and refresh."
+    if response.status_code != 200:
+        return None, f"Health endpoint returned {response.status_code}: {response.text[:200]}"
+    try:
+        return response.json(), None
+    except ValueError:
+        return None, f"Health endpoint returned non-JSON response: {response.text[:200]}"
+
+
+@st.cache_data(ttl=60)
+def fetch_metrics(base_url: str):
+    response = requests.get(f"{base_url}/metrics", timeout=8)
+    if response.status_code == 429:
+        return None, "Metrics endpoint is rate-limited (429). Wait a few seconds and refresh."
+    if response.status_code != 200:
+        return None, f"Metrics endpoint returned {response.status_code}: {response.text[:200]}"
+    return response.text, None
+
 
 st.markdown(
     """
@@ -50,26 +75,7 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
-def fetch_health(base_url: str):
-    response = requests.get(f"{base_url}/health", timeout=8)
-    if response.status_code != 200:
-        return None, f"Health endpoint returned {response.status_code}: {response.text[:200]}"
-    try:
-        return response.json(), None
-    except ValueError:
-        return None, f"Health endpoint returned non-JSON response: {response.text[:200]}"
 
-
-@st.cache_data(ttl=20)
-def fetch_metrics(base_url: str):
-    response = requests.get(f"{base_url}/metrics", timeout=8)
-    if response.status_code == 429:
-        return None, "Metrics endpoint is rate-limited (429). Wait a few seconds and refresh."
-    if response.status_code != 200:
-        return None, f"Metrics endpoint returned {response.status_code}: {response.text[:200]}"
-    return response.text, None
-
-st.set_page_config(page_title="ML Pipeline Dashboard", layout="wide")
 st.title("Image Classification Monitoring and Control")
 
 st.write(f"API URL: {API_URL}")
