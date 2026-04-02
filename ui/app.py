@@ -93,25 +93,49 @@ st.write(f"API URL: {API_URL}")
 
 st.subheader("Model Up-time")
 st.caption("Check if the API is reachable and whether the trained model is currently loaded.")
-try:
-    health, health_error = fetch_health(API_URL)
-    if health_error:
-        st.error(f"Health endpoint unavailable: {health_error}")
-    else:
-        st.json(health)
-except (requests.RequestException, ValueError) as ex:
-    st.error(f"Health endpoint unavailable: {ex}")
+if "health_data" not in st.session_state:
+    st.session_state.health_data = None
+if "health_error" not in st.session_state:
+    st.session_state.health_error = None
+
+if st.button("Refresh Health"):
+    try:
+        health, health_error = fetch_health(API_URL)
+        st.session_state.health_data = health
+        st.session_state.health_error = health_error
+    except (requests.RequestException, ValueError) as ex:
+        st.session_state.health_data = None
+        st.session_state.health_error = f"Health endpoint unavailable: {ex}"
+
+if st.session_state.health_error:
+    st.warning(st.session_state.health_error)
+elif st.session_state.health_data:
+    st.json(st.session_state.health_data)
+else:
+    st.info("Click 'Refresh Health' to fetch current API/model status.")
 
 st.subheader("Production Metrics")
 st.caption("Live Prometheus metrics for request count, latency, and retraining activity.")
-try:
-    metrics_text, metrics_error = fetch_metrics(API_URL)
-    if metrics_error:
-        st.warning(metrics_error)
-    else:
-        st.text(metrics_text[:4000])
-except (requests.RequestException, ValueError) as ex:
-    st.error(f"Metrics endpoint unavailable: {ex}")
+if "metrics_text" not in st.session_state:
+    st.session_state.metrics_text = None
+if "metrics_error" not in st.session_state:
+    st.session_state.metrics_error = None
+
+if st.button("Refresh Metrics"):
+    try:
+        metrics_text, metrics_error = fetch_metrics(API_URL)
+        st.session_state.metrics_text = metrics_text
+        st.session_state.metrics_error = metrics_error
+    except (requests.RequestException, ValueError) as ex:
+        st.session_state.metrics_text = None
+        st.session_state.metrics_error = f"Metrics endpoint unavailable: {ex}"
+
+if st.session_state.metrics_error:
+    st.warning(st.session_state.metrics_error)
+elif st.session_state.metrics_text:
+    st.text(st.session_state.metrics_text[:4000])
+else:
+    st.info("Click 'Refresh Metrics' to fetch current Prometheus metrics.")
 
 st.divider()
 st.subheader("Visualizations")
