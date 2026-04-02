@@ -11,6 +11,27 @@ from PIL import UnidentifiedImageError
 
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 
+
+@st.cache_data(ttl=20)
+def fetch_health(base_url: str):
+    response = requests.get(f"{base_url}/health", timeout=8)
+    if response.status_code != 200:
+        return None, f"Health endpoint returned {response.status_code}: {response.text[:200]}"
+    try:
+        return response.json(), None
+    except ValueError:
+        return None, f"Health endpoint returned non-JSON response: {response.text[:200]}"
+
+
+@st.cache_data(ttl=20)
+def fetch_metrics(base_url: str):
+    response = requests.get(f"{base_url}/metrics", timeout=8)
+    if response.status_code == 429:
+        return None, "Metrics endpoint is rate-limited (429). Wait a few seconds and refresh."
+    if response.status_code != 200:
+        return None, f"Metrics endpoint returned {response.status_code}: {response.text[:200]}"
+    return response.text, None
+
 st.set_page_config(page_title="ML Pipeline Dashboard", layout="wide")
 st.title("Image Classification Monitoring and Control")
 
@@ -18,15 +39,21 @@ st.write(f"API URL: {API_URL}")
 
 st.subheader("Model Up-time")
 try:
-    health = requests.get(f"{API_URL}/health", timeout=5).json()
-    st.json(health)
+    health, health_error = fetch_health(API_URL)
+    if health_error:
+        st.error(f"Health endpoint unavailable: {health_error}")
+    else:
+        st.json(health)
 except (requests.RequestException, ValueError) as ex:
     st.error(f"Health endpoint unavailable: {ex}")
 
 st.subheader("Production Metrics")
 try:
-    metrics_text = requests.get(f"{API_URL}/metrics", timeout=5).text
-    st.text(metrics_text[:4000])
+    metrics_text, metrics_error = fetch_metrics(API_URL)
+    if metrics_error:
+        st.warning(metrics_error)
+    else:
+        st.text(metrics_text[:4000])
 except (requests.RequestException, ValueError) as ex:
     st.error(f"Metrics endpoint unavailable: {ex}")
 
