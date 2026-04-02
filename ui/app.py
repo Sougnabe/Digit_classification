@@ -12,7 +12,44 @@ from PIL import UnidentifiedImageError
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 
-@st.cache_data(ttl=20)
+st.markdown(
+    """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Manrope', sans-serif;
+}
+
+.hero-box {
+    border: 1px solid #dbe7f3;
+    border-radius: 14px;
+    padding: 1rem 1.2rem;
+    background: linear-gradient(120deg, #f5fbff 0%, #f8fff9 100%);
+}
+
+.section-note {
+    color: #3f4f5f;
+    margin-top: -0.2rem;
+    margin-bottom: 0.6rem;
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    """
+<div class="hero-box">
+    <h1 style="margin:0; color:#0f3554;">Image Classification Monitoring and Control</h1>
+    <p style="margin:0.45rem 0 0 0; color:#294a66;">
+        Use this dashboard to monitor model health, review data insights, run predictions, upload new images,
+        and trigger retraining.
+    </p>
+</div>
+""",
+    unsafe_allow_html=True,
+)
 def fetch_health(base_url: str):
     response = requests.get(f"{base_url}/health", timeout=8)
     if response.status_code != 200:
@@ -38,6 +75,7 @@ st.title("Image Classification Monitoring and Control")
 st.write(f"API URL: {API_URL}")
 
 st.subheader("Model Up-time")
+st.caption("Check if the API is reachable and whether the trained model is currently loaded.")
 try:
     health, health_error = fetch_health(API_URL)
     if health_error:
@@ -48,6 +86,7 @@ except (requests.RequestException, ValueError) as ex:
     st.error(f"Health endpoint unavailable: {ex}")
 
 st.subheader("Production Metrics")
+st.caption("Live Prometheus metrics for request count, latency, and retraining activity.")
 try:
     metrics_text, metrics_error = fetch_metrics(API_URL)
     if metrics_error:
@@ -59,6 +98,7 @@ except (requests.RequestException, ValueError) as ex:
 
 st.divider()
 st.subheader("Visualizations")
+st.caption("Simple insights from your training data: class balance, image dimensions, and brightness patterns.")
 
 train_path = Path("data/train")
 class_counts = {}
@@ -85,20 +125,24 @@ if train_path.exists():
 if class_counts:
     counts_df = pd.DataFrame({"class": list(class_counts.keys()), "count": list(class_counts.values())})
     st.write("Feature 1: Class distribution")
+    st.caption("Shows how many images exist per class. Big imbalance can affect model quality.")
     st.bar_chart(counts_df.set_index("class"))
 
     shape_df = pd.DataFrame({"width": widths, "height": heights})
     st.write("Feature 2: Image width/height distribution")
+    st.caption("Shows whether image sizes are consistent. Very different sizes can hurt performance.")
     st.scatter_chart(shape_df)
 
     bright_df = pd.DataFrame({"brightness": brightness})
     st.write("Feature 3: Brightness distribution")
+    st.caption("Shows if images are mostly dark or bright. Lighting variation can change predictions.")
     st.line_chart(bright_df)
 else:
     st.info("Add class folders and images under data/train to see visualizations.")
 
 st.divider()
 st.subheader("Production Evaluation")
+st.caption("Run evaluation on the current production model and review performance metrics.")
 if st.button("Run Production Evaluation"):
     try:
         response = requests.get(f"{API_URL}/evaluate", timeout=60)
@@ -108,6 +152,7 @@ if st.button("Run Production Evaluation"):
 
 st.divider()
 st.subheader("Predict Single Image")
+st.caption("Upload one image to get its predicted class from the deployed model.")
 pred_file = st.file_uploader("Upload one image for prediction", type=["png", "jpg", "jpeg", "bmp", "gif"], key="predict")
 if pred_file and st.button("Predict"):
     files = {"file": (pred_file.name, pred_file.getvalue(), pred_file.type)}
@@ -119,6 +164,7 @@ if pred_file and st.button("Predict"):
 
 st.divider()
 st.subheader("Upload Bulk Data for Retraining")
+st.caption("Upload multiple images for one class. These files are saved and used in future retraining.")
 class_name = st.text_input("Class name for uploaded files")
 bulk_files = st.file_uploader(
     "Upload multiple images for retraining",
@@ -136,6 +182,7 @@ if bulk_files and class_name and st.button("Upload Bulk"):
         st.error(f"Upload failed: {ex}")
 
 st.subheader("Trigger Retraining")
+st.caption("Start a new training run using current dataset and uploaded images.")
 epochs = st.number_input("Epochs", min_value=1, max_value=50, value=3)
 if st.button("Retrain Model"):
     try:
